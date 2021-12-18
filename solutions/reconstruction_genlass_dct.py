@@ -17,6 +17,17 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from diffcam.io import load_data
 
+from pycsou.core import LinearOperator
+from pycsou.func.loss import SquaredL2Loss
+from pycsou.func.penalty import L1Norm
+from pycsou.linop.conv import Convolve2D
+from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
+from diffcam.plot import plot_image
+
+import numpy as np
+from scipy.fft import dctn, idctn
+
+
 
 @click.command()
 @click.option(
@@ -93,6 +104,9 @@ from diffcam.io import load_data
     is_flag=True,
     help="Same PSF for all channels (sum) or unique PSF for RGB.",
 )
+
+
+    
 def reconstruction(
     psf_fp,
     data_fp,
@@ -109,6 +123,7 @@ def reconstruction(
     no_plot,
     single_psf,
 ):
+    #print(data.shape)
     psf, data = load_data(
         psf_fp=psf_fp,
         data_fp=data_fp,
@@ -134,17 +149,50 @@ def reconstruction(
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
+    print(data.size)
+    print(data.shape)
+    n1 = data.shape[0]
+    n2 = data.shape[1]
+    obj_idct2d = IDCT_2D(size=data.size, n1=n1, n2=n2)
+    H = Convolve2D(size=data.size, filter=psf, shape=data.shape) * obj_idct2d
+    H.compute_lipschitz_cst()
+    l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
+    F = l22_loss * H
+    lambda_ = 0.001
+    G = lambda_ * L1Norm(dim=H.shape[1])
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=1)#, max_iter=300)
+    
     print(f"setup time : {time.time() - start_time} s")
 
     start_time = time.time()
     # TODO : apply your reconstruction
+    estimate, converged, diagnostics = apgd.iterate()
+    
+    ax = plot_image(obj_idct2d(estimate['iterand']).reshape(data.shape), gamma=gamma)
+    
     print(f"proc time : {time.time() - start_time} s")
 
     if not no_plot:
         plt.show()
     if save:
+        plt.savefig(plib.Path(save) / f"{n_iter}.png")
         print(f"Files saved to : {save}")
 
 
+class IDCT_2D(LinearOperator):
+    def __init__(self, size: int, n1: int, n2: int, dtype: type = np.float64):
+        self.n1 = n1
+        self.n2 = n2
+        super(IDCT_2D, self).__init__(shape=(size, size))
+        
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        return idctn(x.reshape(self.n1, self.n2), norm="ortho").ravel()
+    
+    def adjoint(self, y: np.ndarray) -> np.ndarray:
+        return dctn(y.reshape(self.n1, self.n2), norm="ortho").ravel()
+
 if __name__ == "__main__":
     reconstruction()
+
+
+

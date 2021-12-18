@@ -17,6 +17,13 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from diffcam.io import load_data
 
+from pycsou.func.loss import SquaredL2Loss
+#from pycsou.func.penalty import L2Norm
+from pycsou.func.penalty import NonNegativeOrthant
+from pycsou.linop.conv import Convolve2D
+from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
+from diffcam.plot import plot_image
+
 
 @click.command()
 @click.option(
@@ -134,10 +141,22 @@ def reconstruction(
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
+    print(data.size)
+    print(data.shape)
+    H = Convolve2D(size=data.size, filter=psf, shape=data.shape)
+    H.compute_lipschitz_cst()
+    l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
+    F = l22_loss * H
+    G = NonNegativeOrthant(dim=H.shape[1])
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=1)#, max_iter=300)
+    
     print(f"setup time : {time.time() - start_time} s")
 
     start_time = time.time()
     # TODO : apply your reconstruction
+    estimate, converged, diagnostics = apgd.iterate()
+    ax = plot_image(estimate['iterand'].reshape(data.shape), gamma=gamma)
+    ax.set_title("Reconstructed Data Img1 - NNLS")
     print(f"proc time : {time.time() - start_time} s")
 
     if not no_plot:
