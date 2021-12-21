@@ -148,26 +148,42 @@ def reconstruction(
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
-    H = Convolve2D(size=data.size, filter=psf, shape=data.shape)
-    H.compute_lipschitz_cst()
 
-    l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
-    #F = l22_loss * H
-    lambda_ = 0.01
-    tmp = H.adjoint(data.flatten())
-    lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
-    print("lamba factor: {}".format(l_factor))
-    print("lambda value: {}".format(lambda_))
-    #G = lambda_ * SquaredL2Norm(dim=H.shape[1])
-    F = l22_loss * H + lambda_ * SquaredL2Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, acceleration="CD", verbose=20, max_iter=n_iter, accuracy_threshold=3e-3)
+    if gray:
+        H = Convolve2D(size=data.size, filter=psf, shape=data.shape)
+        H.compute_lipschitz_cst()
+        l22_loss = (1 / 2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
+        tmp = H.adjoint(data.flatten())
+        lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
+        print("lamba factor: {}".format(l_factor))
+        print("lambda value: {}".format(lambda_))
+        F = l22_loss * H + lambda_ * SquaredL2Norm(dim=H.shape[1])
+        apgd = APGD(dim=H.shape[1], F=F, acceleration="CD", verbose=20, max_iter=n_iter, accuracy_threshold=3e-3)
+
+    else:
+        n1, n2 = data.shape[:2]
+        imsize = n1 * n2
+        listH = [Convolve2D(size=imsize, filter=psf[:,:,i], shape=(n1, n2)) for i in range(3)]
+        for H in listH:
+            H.compute_lipschitz_cst()
+        listLosses = [(1 / 2) * SquaredL2Loss(dim=listH[i].shape[0], data=data[:,:,i].ravel()) for i in range(3)]
+        tmp = listH[0].adjoint(data[:, :, 0].flatten())
+        lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
+        print("lamba factor: {}".format(l_factor))
+        print("lambda value: {}".format(lambda_))
+        listF = [loss * H + lambda_ * SquaredL2Norm(dim=imsize) for loss, H in zip(listLosses, listH)]
+        listapgd = [APGD(dim=imsize, F=F, acceleration="CD", verbose=20, max_iter=n_iter, accuracy_threshold=3e-3) for F in listF]
     
     print(f"setup time : {time.time() - start_time} s")
 
     start_time = time.time()
     # TODO : apply your reconstruction
-    estimate, converged, diagnostics = apgd.iterate()
-    ax = plot_image(estimate['iterand'].reshape(data.shape), gamma=gamma)
+    if gray:
+        estimate, converged, diagnostics = apgd.iterate()
+        ax = plot_image(estimate['iterand'].reshape(data.shape), gamma=gamma)
+    else:
+        estimate = np.stack([apgd.iterate()[0]['iterand'].reshape((n1, n2)) for apgd in listapgd], axis=-1)
+        ax = plot_image(estimate, gamma=gamma)
     ax.set_title("Final reconstruction")
     print(f"proc time : {time.time() - start_time} s")
 
