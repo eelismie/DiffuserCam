@@ -99,6 +99,12 @@ from diffcam.plot import plot_image
     is_flag=True,
     help="Same PSF for all channels (sum) or unique PSF for RGB.",
 )
+@click.option(
+    "--l_factor",
+    default=0.01,
+    type=float,
+    help="Scaling factor for regularization parameter.",
+)
 def reconstruction(
     psf_fp,
     data_fp,
@@ -114,6 +120,7 @@ def reconstruction(
     save,
     no_plot,
     single_psf,
+    l_factor
 ):
     #print(data.shape)
     psf, data = load_data(
@@ -141,15 +148,17 @@ def reconstruction(
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
-    print(data.size)
-    print(data.shape)
     H = Convolve2D(size=data.size, filter=psf, shape=data.shape)
     H.compute_lipschitz_cst()
     l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H
-    lambda_ = 0.01
+    #lambda_ = 0.01
+    tmp = H.adjoint(data.flatten())
+    lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
+    print("lamba factor: {}".format(l_factor))
+    print("lambda value: {}".format(lambda_))
     G = lambda_ * L1Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=1)#, max_iter=300)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=3e-3)
     
     print(f"setup time : {time.time() - start_time} s")
 

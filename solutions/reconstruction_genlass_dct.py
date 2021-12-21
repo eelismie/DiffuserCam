@@ -43,7 +43,7 @@ from scipy.fft import dctn, idctn
 @click.option(
     "--n_iter",
     type=int,
-    default=500,
+    default=300,
     help="Number of iterations.",
 )
 @click.option(
@@ -104,7 +104,12 @@ from scipy.fft import dctn, idctn
     is_flag=True,
     help="Same PSF for all channels (sum) or unique PSF for RGB.",
 )
-
+@click.option(
+    "--l_factor",
+    default=0.000001,
+    type=float,
+    help="Scaling factor for regularization parameter.",
+)
 
     
 def reconstruction(
@@ -122,6 +127,7 @@ def reconstruction(
     save,
     no_plot,
     single_psf,
+    l_factor
 ):
     #print(data.shape)
     psf, data = load_data(
@@ -149,8 +155,6 @@ def reconstruction(
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
-    print(data.size)
-    print(data.shape)
     n1 = data.shape[0]
     n2 = data.shape[1]
     obj_idct2d = IDCT_2D(size=data.size, n1=n1, n2=n2)
@@ -158,9 +162,13 @@ def reconstruction(
     H.compute_lipschitz_cst()
     l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H
-    lambda_ = 0.001
+    tmp = H.adjoint(data.flatten())
+    lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
+    print("lamba factor: {}".format(l_factor))
+    print("lambda value: {}".format(lambda_))
+    #lambda_ = 0.001
     G = lambda_ * L1Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=1)#, max_iter=300)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-3)
     
     print(f"setup time : {time.time() - start_time} s")
 
@@ -185,11 +193,11 @@ class IDCT_2D(LinearOperator):
         self.n2 = n2
         super(IDCT_2D, self).__init__(shape=(size, size))
         
-    def __call__(self, x: np.ndarray) -> np.ndarray:
-        return idctn(x.reshape(self.n1, self.n2), norm="ortho").ravel()
-    
-    def adjoint(self, y: np.ndarray) -> np.ndarray:
-        return dctn(y.reshape(self.n1, self.n2), norm="ortho").ravel()
+    def __call__(self, y: np.ndarray) -> np.ndarray:
+        return idctn(y.reshape(self.n1, self.n2), norm="ortho").ravel()
+
+    def adjoint(self, x: np.ndarray) -> np.ndarray:
+        return dctn(x.reshape(self.n1, self.n2), norm="ortho").ravel()
 
 if __name__ == "__main__":
     reconstruction()

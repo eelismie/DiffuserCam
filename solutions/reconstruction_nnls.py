@@ -39,7 +39,7 @@ from diffcam.plot import plot_image
 @click.option(
     "--n_iter",
     type=int,
-    default=500,
+    default=100,
     help="Number of iterations.",
 )
 @click.option(
@@ -141,14 +141,12 @@ def reconstruction(
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
-    print(data.size)
-    print(data.shape)
     H = Convolve2D(size=data.size, filter=psf, shape=data.shape)
     H.compute_lipschitz_cst()
     l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H
     G = NonNegativeOrthant(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=1)#, max_iter=300)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter)
     
     print(f"setup time : {time.time() - start_time} s")
 
