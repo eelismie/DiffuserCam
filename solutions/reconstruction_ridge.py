@@ -141,6 +141,8 @@ def reconstruction(
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
 
+    start_time = time.time()
+
     if gray:
         H2 = Convolve2D(size=data.size, filter=psf, shape=(data.shape[0], data.shape[1]))
         H2.compute_lipschitz_cst()
@@ -155,12 +157,20 @@ def reconstruction(
         lips = sum([i.lipschitz_cst for i in listH])
 
     H = Convolve2DRGB(data.size, psf, lips) #assumes psf and data are same shape
+
     l22_loss = (1 / 2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     tmp = H.adjoint(data.flatten())
     lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
     F = l22_loss * H + lambda_ * SquaredL2Norm(dim=H.shape[1])
     apgd = APGD(dim=H.shape[1], F=F, acceleration="CD", verbose=20, max_iter=n_iter, accuracy_threshold=3e-3)
+
+    print(f"setup time : {time.time() - start_time} s")
+
+    start_time = time.time()
+
     estimate, converged, diagnostics = apgd.iterate()
+
+    print(f"proc time : {time.time() - start_time} s")
 
     ax = plot_image(estimate['iterand'].reshape(data.shape), gamma=gamma)
     ax.set_title("Final reconstruction")
