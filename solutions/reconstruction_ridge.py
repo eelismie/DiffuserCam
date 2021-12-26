@@ -1,14 +1,6 @@
-"""
-This script will load the PSF data and raw measurement for the reconstruction
-that can implement afterwards.
 
-```bash
-python scripts/reconstruction_template.py --psf_fp data/psf/diffcam_rgb.png \
---data_fp data/raw_data/thumbs_up_rgb.png
-```
 
-"""
-
+#implementation of 2D convolution along RGB channels, taking inspiration from admm.py
 import os
 import time
 import pathlib as plib
@@ -22,6 +14,8 @@ from pycsou.func.penalty import SquaredL2Norm
 from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
 from diffcam.plot import plot_image
+
+from utils import Convolve2DRGB
 
 import numpy as np
 
@@ -104,8 +98,9 @@ import numpy as np
     "--l_factor",
     default=0.1,
     type=float,
-    help="Scaling factor for regularization parameter.",
+    help="Scaling factor for regularization parameter.", 
 )
+
 def reconstruction(
     psf_fp,
     data_fp,
@@ -146,52 +141,34 @@ def reconstruction(
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
 
-    start_time = time.time()
-    # TODO : setup for your reconstruction algorithm
-
     if gray:
-        H = Convolve2D(size=data.size, filter=psf, shape=data.shape)
-        H.compute_lipschitz_cst()
-        l22_loss = (1 / 2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
-        tmp = H.adjoint(data.flatten())
-        lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
-        print("lamba factor: {}".format(l_factor))
-        print("lambda value: {}".format(lambda_))
-        F = l22_loss * H + lambda_ * SquaredL2Norm(dim=H.shape[1])
-        apgd = APGD(dim=H.shape[1], F=F, acceleration="CD", verbose=20, max_iter=n_iter, accuracy_threshold=3e-3)
-
-    else:
+        H2 = Convolve2D(size=data.size, filter=psf, shape=(data.shape[0], data.shape[1]))
+        H2.compute_lipschitz_cst()
+        lips = H2.lipschitz_cst
+    else: 
+        #TODO: find a tighter upper bound to the operator norm of RGB operator
         n1, n2 = data.shape[:2]
         imsize = n1 * n2
         listH = [Convolve2D(size=imsize, filter=psf[:,:,i], shape=(n1, n2)) for i in range(3)]
         for H in listH:
             H.compute_lipschitz_cst()
-        listLosses = [(1 / 2) * SquaredL2Loss(dim=listH[i].shape[0], data=data[:,:,i].ravel()) for i in range(3)]
-        tmp = listH[0].adjoint(data[:, :, 0].flatten())
-        lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
-        print("lamba factor: {}".format(l_factor))
-        print("lambda value: {}".format(lambda_))
-        listF = [loss * H + lambda_ * SquaredL2Norm(dim=imsize) for loss, H in zip(listLosses, listH)]
-        listapgd = [APGD(dim=imsize, F=F, acceleration="CD", verbose=20, max_iter=n_iter, accuracy_threshold=3e-3) for F in listF]
-    
-    print(f"setup time : {time.time() - start_time} s")
+        lips = sum([i.lipschitz_cst for i in listH])
 
-    start_time = time.time()
-    # TODO : apply your reconstruction
-    if gray:
-        estimate, converged, diagnostics = apgd.iterate()
-        ax = plot_image(estimate['iterand'].reshape(data.shape), gamma=gamma)
-    else:
-        estimate = np.stack([apgd.iterate()[0]['iterand'].reshape((n1, n2)) for apgd in listapgd], axis=-1)
-        ax = plot_image(estimate, gamma=gamma)
+    H = Convolve2DRGB(data.size, psf, lips) #assumes psf and data are same shape
+    l22_loss = (1 / 2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
+    tmp = H.adjoint(data.flatten())
+    lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
+    F = l22_loss * H + lambda_ * SquaredL2Norm(dim=H.shape[1])
+    apgd = APGD(dim=H.shape[1], F=F, acceleration="CD", verbose=20, max_iter=n_iter, accuracy_threshold=3e-3)
+    estimate, converged, diagnostics = apgd.iterate()
+
+    ax = plot_image(estimate['iterand'].reshape(data.shape), gamma=gamma)
     ax.set_title("Final reconstruction")
-    print(f"proc time : {time.time() - start_time} s")
 
     if not no_plot:
         plt.show()
     if save:
         print(f"Files saved to : {save}")
-
 
 if __name__ == "__main__":
     reconstruction()

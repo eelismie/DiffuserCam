@@ -179,6 +179,7 @@ def reconstruction(
     start_time = time.time()
     # TODO : apply your reconstruction
     estimate, converged, diagnostics = apgd.iterate()
+    print(estimate)
     ax = plot_image(estimate['iterand'].reshape(data.shape), gamma=gamma)
     ax.set_title("Reconstructed Data Img1 - NNTV")
     print(f"proc time : {time.time() - start_time} s")
