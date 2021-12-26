@@ -109,10 +109,10 @@ class finiteDifferenceRGB(LinearOperator):
 
     def __call__(self, x):
         """Gradient of image estimate, approximated by finite difference. Space where image is assumed sparse."""
-        x_im = x.reshape(self.data_shape)
+        x = x.reshape(self.data_shape)
         out = np.stack(
-            (np.roll(x_im, 1, axis=0) - x_im, np.roll(x_im, 1, axis=1) - x_im),
-            axis=len(x_im.shape),
+            (np.roll(x, 1, axis=0) - x, np.roll(x, 1, axis=1) - x),
+            axis=len(x.shape),
         )
         out = out.ravel()
         return out
