@@ -3,6 +3,7 @@ import numpy as np
 from scipy import fft
 from scipy.fftpack import next_fast_len
 from pycsou.core.linop import LinearOperator
+from scipy.fft import dctn, idctn
 
 class Convolve2DRGB(LinearOperator):
 
@@ -124,3 +125,16 @@ class finiteDifferenceRGB(LinearOperator):
         out = diff1 + diff2
         out = out.ravel()
         return out
+
+class IDCT_2D(LinearOperator):
+    #TODO: fix this operator 
+    def __init__(self, size: int, n1: int, n2: int, dtype: type = np.float64):
+        self.n1 = n1
+        self.n2 = n2
+        super(IDCT_2D, self).__init__(shape=(size, size))
+        
+    def __call__(self, y: np.ndarray) -> np.ndarray:
+        return idctn(y.reshape(self.n1, self.n2), norm="ortho").ravel()
+
+    def adjoint(self, x: np.ndarray) -> np.ndarray:
+        return dctn(x.reshape(self.n1, self.n2), norm="ortho").ravel()
