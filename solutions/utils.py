@@ -11,7 +11,7 @@ class Convolve2DRGB(LinearOperator):
     taken from diffcam/recon.py and diffcam/admm.py files. 
     """
 
-    def __init__(self, size, psf, lipschitz_cst = 0.01, dtype=np.float32):
+    def __init__(self, size, psf, lipschitz_cst = 1000, dtype=np.float32):
 
         #this p
         self._is_rgb = True if len(psf.shape) == 3 else False
@@ -100,3 +100,27 @@ class Convolve2DRGB(LinearOperator):
         """crop"""
     
         return x[self._start_idx[0] : self._end_idx[0], self._start_idx[1] : self._end_idx[1]]
+
+class finiteDifferenceRGB(LinearOperator):
+
+    def __init__(self, data_shape, lipschitz_cst):
+        self.data_shape = data_shape
+        super(finiteDifferenceRGB, self).__init__(shape=(data_shape[0], data_shape[1]), lipschitz_cst = lipschitz_cst)
+
+    def __call__(self, x):
+        """Gradient of image estimate, approximated by finite difference. Space where image is assumed sparse."""
+        x_im = x.reshape(self.data_shape)
+        out = np.stack(
+            (np.roll(x_im, 1, axis=0) - x_im, np.roll(x_im, 1, axis=1) - x_im),
+            axis=len(x_im.shape),
+        )
+        out = out.ravel()
+        return out
+
+    def adjoint(self, x):
+        x = x.reshape(self.data_shape)
+        diff1 = np.roll(x[..., 0], -1, axis=0) - x[..., 0]
+        diff2 = np.roll(x[..., 1], -1, axis=1) - x[..., 1]
+        out = diff1 + diff2
+        out = out.ravel()
+        return out
