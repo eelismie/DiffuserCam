@@ -26,6 +26,8 @@ from pycsou.linop.diff import Gradient
 from diffcam.plot import plot_image
 import numpy as np
 
+from utils import Convolve2DRGB
+from pycsou.linop.base import BlockDiagonalOperator
 
 @click.command()
 @click.option(
@@ -158,8 +160,20 @@ def reconstruction(
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
-    H = Convolve2D(size=data.size, filter=psf, shape=data.shape)
+
+    is_rbg = len(data.shape) == 3
+
+    if is_rbg:
+        shape_ = (data.shape[0], data.shape[1])
+        grad = BlockDiagonalOperator(Gradient(shape_), Gradient(shape_), Gradient(shape_))
+        grad.compute_lipschitz_cst()
+    else: 
+        grad = Gradient(data.shape)
+        grad.compute_lipschitz_cst()
+
+    H = Convolve2DRGB(data.size, psf) #assumes psf and data are same shape
     H.compute_lipschitz_cst()
+
     l22_loss = (1 / 2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H
     G = NonNegativeOrthant(dim=H.shape[1])
@@ -167,8 +181,6 @@ def reconstruction(
     lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
     print("lamba factor: {}".format(l_factor))
     print("lambda value: {}".format(lambda_))
-    grad = Gradient(data.shape)
-    grad.compute_lipschitz_cst()
     h = HuberNorm(dim=grad.shape[0], delta=delta)
     F += lambda_ * h * grad
 

@@ -24,8 +24,9 @@ from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import PDS
 from pycsou.linop.diff import Gradient
 from diffcam.plot import plot_image
+from pycsou.linop.base import BlockDiagonalOperator
 
-from utils import Convolve2DRGB
+from utils import Convolve2DRGB, finiteDifferenceRGB
 
 @click.command()
 @click.option(
@@ -151,21 +152,18 @@ def reconstruction(
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
 
-    if gray:
-        H2 = Convolve2D(size=data.size, filter=psf, shape=(data.shape[0], data.shape[1]))
-        H2.compute_lipschitz_cst()
-        lips = H2.lipschitz_cst
+    is_rbg = len(data.shape) == 3
+
+    if is_rbg:
+        shape_ = (data.shape[0], data.shape[1])
+        grad = BlockDiagonalOperator(Gradient(shape_), Gradient(shape_), Gradient(shape_))
+        grad.compute_lipschitz_cst()
     else: 
-        #TODO: find a tighter upper bound to the operator norm of RGB operator
-        n1, n2 = data.shape[:2]
-        imsize = n1 * n2
-        listH = [Convolve2D(size=imsize, filter=psf[:,:,i], shape=(n1, n2)) for i in range(3)]
-        for H in listH:
-            H.compute_lipschitz_cst()
-        lips = sum([i.lipschitz_cst for i in listH])
+        grad = Gradient(data.shape)
+        grad.compute_lipschitz_cst()
 
-    H = Convolve2DRGB(data.size, psf, lips) #assumes psf and data are same shape
-
+    H = Convolve2DRGB(data.size, psf) #assumes psf and data are same shape
+    H.compute_lipschitz_cst()
 
     l22_loss = (1 / 2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H
@@ -174,8 +172,7 @@ def reconstruction(
     lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
     print("lamba factor: {}".format(l_factor))
     print("lambda value: {}".format(lambda_))
-    grad = Gradient(data.shape)
-    grad.compute_lipschitz_cst()
+
     Hcal = lambda_ * L1Norm(dim=grad.shape[0])
 
     pds = PDS(dim=H.shape[1], F=F, G=G, H=Hcal, K=grad, verbose=10, max_iter=n_iter, accuracy_threshold=1e-3)

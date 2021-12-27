@@ -24,11 +24,11 @@ from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
 from diffcam.plot import plot_image
 
-from utils import Convolve2DRGB, IDCT_2D
+from utils import Convolve2DRGB
+from pycsou.linop.base import BlockDiagonalOperator
 
 import numpy as np
 from scipy.fft import dctn, idctn
-
 
 @click.command()
 @click.option(
@@ -155,42 +155,37 @@ def reconstruction(
         save.mkdir(exist_ok=False)
 
     start_time = time.time()
+    # TODO : setup for your reconstruction algorithm
 
-    if gray:
-        H2 = Convolve2D(size=data.size, filter=psf, shape=(data.shape[0], data.shape[1]))
-        H2.compute_lipschitz_cst()
-        lips = H2.lipschitz_cst
+    is_rbg = len(data.shape) == 3
+
+    if is_rbg:
+        obj_idct2d = IDCT_2D(size=data.shape[0]*data.shape[1], n1=data.shape[0], n2=data.shape[1])
+        idct = BlockDiagonalOperator(obj_idct2d, obj_idct2d , obj_idct2d)
     else: 
-        #TODO: find a tighter upper bound to the operator norm of RGB operator
-        n1, n2 = data.shape[:2]
-        imsize = n1 * n2
-        listH = [Convolve2D(size=imsize, filter=psf[:,:,i], shape=(n1, n2)) for i in range(3)]
-        for H in listH:
-            H.compute_lipschitz_cst()
-        lips = sum([i.lipschitz_cst for i in listH])
+        idct = IDCT_2D(size=data.size, n1=data.shape[0], n2=data.shape[1])
 
-    H = Convolve2DRGB(data.size, psf, lips) #assumes psf and data are same shape
-
-    n1 = data.shape[0]
-    n2 = data.shape[1]
-    obj_idct2d = IDCT_2D(size=data.size, n1=n1, n2=n2)
+    H = Convolve2DRGB(data.size, psf) * idct
+    H.compute_lipschitz_cst()
 
     l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H
     tmp = H.adjoint(data.flatten())
     lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
+
     print("lamba factor: {}".format(l_factor))
     print("lambda value: {}".format(lambda_))
-    #lambda_ = 0.001
+
     G = lambda_ * L1Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-3)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-4)
     
     print(f"setup time : {time.time() - start_time} s")
 
     start_time = time.time()
+    # TODO : apply your reconstruction
     estimate, converged, diagnostics = apgd.iterate()
     
-    ax = plot_image(obj_idct2d(estimate['iterand']).reshape(data.shape), gamma=gamma)
+    ax = plot_image(idct(estimate['iterand']).reshape(data.shape), gamma=gamma)
     
     print(f"proc time : {time.time() - start_time} s")
 
@@ -199,6 +194,24 @@ def reconstruction(
     if save:
         plt.savefig(plib.Path(save) / f"{n_iter}.png")
         print(f"Files saved to : {save}")
+
+
+class IDCT_2D(LinearOperator):
+
+    """
+    Inverse discrete cosine transform operator 
+    """
+    
+    def __init__(self, size: int, n1: int, n2: int, dtype: type = np.float64):
+        self.n1 = n1
+        self.n2 = n2
+        super(IDCT_2D, self).__init__(shape=(size, size))
+        
+    def __call__(self, y: np.ndarray) -> np.ndarray:
+        return idctn(y.reshape(self.n1, self.n2), norm="ortho").ravel()
+
+    def adjoint(self, x: np.ndarray) -> np.ndarray:
+        return dctn(x.reshape(self.n1, self.n2), norm="ortho").ravel()
 
 if __name__ == "__main__":
     reconstruction()

@@ -149,20 +149,8 @@ def reconstruction(
 
     start_time = time.time()
 
-    if gray:
-        H2 = Convolve2D(size=data.size, filter=psf, shape=(data.shape[0], data.shape[1]))
-        H2.compute_lipschitz_cst()
-        lips = H2.lipschitz_cst
-    else: 
-        #TODO: find a tighter upper bound to the operator norm of RGB operator
-        n1, n2 = data.shape[:2]
-        imsize = n1 * n2
-        listH = [Convolve2D(size=imsize, filter=psf[:,:,i], shape=(n1, n2)) for i in range(3)]
-        for H in listH:
-            H.compute_lipschitz_cst()
-        lips = sum([i.lipschitz_cst for i in listH])
-
-    H = Convolve2DRGB(data.size, psf, lips) #assumes psf and data are same shape
+    H = Convolve2DRGB(data.size, psf) #assumes psf and data are same shape
+    H.compute_lipschitz_cst()
 
     l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H

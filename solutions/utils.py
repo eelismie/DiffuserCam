@@ -12,9 +12,10 @@ class Convolve2DRGB(LinearOperator):
     taken from diffcam/recon.py and diffcam/admm.py files. 
     """
 
-    def __init__(self, size, psf, lipschitz_cst = 1000, dtype=np.float32):
+    def __init__(self, size, psf, dtype=np.float32):
 
-        #this p
+        super(Convolve2DRGB, self).__init__(shape=(size, size))
+        
         self._is_rgb = True if len(psf.shape) == 3 else False
         if self._is_rgb:
             self._psf = psf
@@ -45,8 +46,6 @@ class Convolve2DRGB(LinearOperator):
 
         # pre-compute operators / outputs
         self.reset()
-
-        super(Convolve2DRGB, self).__init__(shape=(size, size), lipschitz_cst = lipschitz_cst)
 
     def reset(self):
         # spatial frequency response
@@ -101,40 +100,3 @@ class Convolve2DRGB(LinearOperator):
         """crop"""
     
         return x[self._start_idx[0] : self._end_idx[0], self._start_idx[1] : self._end_idx[1]]
-
-class finiteDifferenceRGB(LinearOperator):
-
-    def __init__(self, data_shape, lipschitz_cst):
-        self.data_shape = data_shape
-        super(finiteDifferenceRGB, self).__init__(shape=(data_shape[0], data_shape[1]), lipschitz_cst = lipschitz_cst)
-
-    def __call__(self, x):
-        """Gradient of image estimate, approximated by finite difference. Space where image is assumed sparse."""
-        x = x.reshape(self.data_shape)
-        out = np.stack(
-            (np.roll(x, 1, axis=0) - x, np.roll(x, 1, axis=1) - x),
-            axis=len(x.shape),
-        )
-        out = out.ravel()
-        return out
-
-    def adjoint(self, x):
-        x = x.reshape(self.data_shape)
-        diff1 = np.roll(x[..., 0], -1, axis=0) - x[..., 0]
-        diff2 = np.roll(x[..., 1], -1, axis=1) - x[..., 1]
-        out = diff1 + diff2
-        out = out.ravel()
-        return out
-
-class IDCT_2D(LinearOperator):
-    #TODO: fix this operator 
-    def __init__(self, size: int, n1: int, n2: int, dtype: type = np.float64):
-        self.n1 = n1
-        self.n2 = n2
-        super(IDCT_2D, self).__init__(shape=(size, size))
-        
-    def __call__(self, y: np.ndarray) -> np.ndarray:
-        return idctn(y.reshape(self.n1, self.n2), norm="ortho").ravel()
-
-    def adjoint(self, x: np.ndarray) -> np.ndarray:
-        return dctn(x.reshape(self.n1, self.n2), norm="ortho").ravel()
