@@ -184,7 +184,7 @@ def reconstruction(
     h = HuberNorm(dim=grad.shape[0], delta=delta)
     F += lambda_ * h * grad
 
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-3)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-4)
 
     print(f"setup time : {time.time() - start_time} s")
 
