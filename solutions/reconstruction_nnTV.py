@@ -150,7 +150,6 @@ def reconstruction(
         save.mkdir(exist_ok=False)
 
     start_time = time.time()
-    # TODO : setup for your reconstruction algorithm
 
     is_rbg = len(data.shape) == 3
 
@@ -170,6 +169,7 @@ def reconstruction(
     G = NonNegativeOrthant(dim=H.shape[1])
     tmp = H.adjoint(data.flatten())
     lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
+    
     print("lamba factor: {}".format(l_factor))
     print("lambda value: {}".format(lambda_))
 

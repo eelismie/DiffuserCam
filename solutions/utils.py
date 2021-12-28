@@ -4,6 +4,7 @@ from scipy import fft
 from scipy.fftpack import next_fast_len
 from pycsou.core.linop import LinearOperator
 from scipy.fft import dctn, idctn
+from pycsou.core.functional import DifferentiableFunctional
 
 class Convolve2DRGB(LinearOperator):
 
@@ -100,3 +101,19 @@ class Convolve2DRGB(LinearOperator):
         """crop"""
     
         return x[self._start_idx[0] : self._end_idx[0], self._start_idx[1] : self._end_idx[1]]
+
+class HuberNorm(DifferentiableFunctional):
+    def __init__(self, dim: int, delta: float):
+        self.delta = delta
+        super(HuberNorm, self).__init__(dim=dim, diff_lipschitz_cst=1.)
+
+    def __call__(self, x):
+        center = np.abs(x) <= self.delta
+        x[center] = .5 * x[center]**2
+        x[~ center] = self.delta * (np.abs(x[~ center]) - self.delta/2)
+        return x.sum()
+
+    def jacobianT(self, x):
+        idx = np.abs(x) > self.delta
+        x[idx] = self.delta * np.sign(x[idx])
+        return x

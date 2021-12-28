@@ -23,6 +23,7 @@ from pycsou.func.penalty import L1Norm
 from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
 from diffcam.plot import plot_image
+from pycsou.linop.diff import Gradient
 
 from utils import Convolve2DRGB
 from pycsou.linop.base import BlockDiagonalOperator
