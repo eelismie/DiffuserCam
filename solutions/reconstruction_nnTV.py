@@ -26,7 +26,7 @@ from pycsou.linop.diff import Gradient
 from diffcam.plot import plot_image
 from pycsou.linop.base import BlockDiagonalOperator
 
-from utils import Convolve2DRGB, finiteDifferenceRGB
+from utils import Convolve2DRGB, APGD_, PDS_
 
 @click.command()
 @click.option(
@@ -175,7 +175,7 @@ def reconstruction(
 
     Hcal = lambda_ * L1Norm(dim=grad.shape[0])
 
-    pds = PDS(dim=H.shape[1], F=F, G=G, H=Hcal, K=grad, verbose=10, max_iter=n_iter, accuracy_threshold=1e-3)
+    pds = PDS_(dim=H.shape[1], F=F, G=G, H=Hcal, K=grad, verbose=10, max_iter=n_iter, accuracy_threshold=1e-5, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=save)
 
     print(f"setup time : {time.time() - start_time} s")
 
@@ -189,8 +189,8 @@ def reconstruction(
     if not no_plot:
         plt.show()
     if save:
+        plt.savefig(plib.Path(save) / f"{n_iter}_final.png")
         print(f"Files saved to : {save}")
-
 
 if __name__ == "__main__":
     reconstruction()

@@ -26,7 +26,7 @@ from pycsou.linop.diff import Gradient
 from diffcam.plot import plot_image
 import numpy as np
 
-from utils import Convolve2DRGB
+from utils import Convolve2DRGB, PDS_, APGD_
 from pycsou.linop.base import BlockDiagonalOperator
 
 @click.command()
@@ -54,7 +54,7 @@ from pycsou.linop.base import BlockDiagonalOperator
 )
 @click.option(
     "--disp",
-    default=50,
+    default=10,
     type=int,
     help="How many iterations to wait for intermediate plot/results. Set to negative value for no intermediate plots.",
 )
@@ -184,7 +184,7 @@ def reconstruction(
     h = HuberNorm(dim=grad.shape[0], delta=delta)
     F += lambda_ * h * grad
 
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-4)
+    apgd = APGD_(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=disp, max_iter=n_iter, accuracy_threshold=1e-4, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=save)
 
     print(f"setup time : {time.time() - start_time} s")
 
@@ -198,6 +198,7 @@ def reconstruction(
     if not no_plot:
         plt.show()
     if save:
+        plt.savefig(plib.Path(save) / f"{n_iter}_final.png")
         print(f"Files saved to : {save}")
 
 class HuberNorm(DifferentiableFunctional):

@@ -5,6 +5,54 @@ from scipy.fftpack import next_fast_len
 from pycsou.core.linop import LinearOperator
 from scipy.fft import dctn, idctn
 from pycsou.core.functional import DifferentiableFunctional
+from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
+from pycsou.opt.proxalgs import PDS
+from diffcam.plot import plot_image
+import matplotlib.pyplot as plt
+import pathlib as plib
+
+# for disp and save arguments
+# apgd with intermediate plots and saves!
+class APGD_(APGD):
+    def __init__(self, gamma, datashape, no_plot, save, *args, **kwargs):
+        self.gamma = gamma
+        self.datashape = datashape
+        self.no_plot = no_plot
+        self.ax = None
+        self.save = save
+        super().__init__(*args, **kwargs)
+
+    def print_diagnostics(self):
+        print(dict(self.diagnostics.loc[self.iter]))
+        if not self.no_plot:
+            self.ax = plot_image(self.iterand['iterand'].reshape(self.datashape), gamma=self.gamma, ax=self.ax)
+            self.ax.set_title(dict(self.diagnostics.loc[self.iter]))
+            plt.draw()
+            plt.pause(0.2)
+        if self.save:
+            plt.savefig(plib.Path(self.save) / f"{self.iter}.png")
+            print(f"Files saved to : {self.save}")
+
+
+class PDS_(PDS):
+    def __init__(self, gamma, datashape, no_plot, save, *args, **kwargs):
+        self.gamma = gamma
+        self.datashape = datashape
+        self.no_plot = no_plot
+        self.ax = None
+        self.save = save
+        super().__init__(*args, **kwargs)
+
+    def print_diagnostics(self):
+        print(dict(self.diagnostics.loc[self.iter]))
+        if not self.no_plot:
+            self.ax = plot_image(self.iterand['iterand'].reshape(self.datashape), gamma=self.gamma, ax=self.ax)
+            self.ax.set_title(dict(self.diagnostics.loc[self.iter]))
+            plt.draw()
+            plt.pause(0.2)
+        if self.save:
+            plt.savefig(plib.Path(self.save) / f"{self.iter}.png")
+            print(f"Files saved to : {self.save}")
 
 class Convolve2DRGB(LinearOperator):
 
@@ -117,3 +165,5 @@ class HuberNorm(DifferentiableFunctional):
         idx = np.abs(x) > self.delta
         x[idx] = self.delta * np.sign(x[idx])
         return x
+
+

@@ -23,7 +23,7 @@ from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
 from diffcam.plot import plot_image
 
-from utils import Convolve2DRGB
+from utils import Convolve2DRGB, APGD_, PDS_
 
 @click.command()
 @click.option(
@@ -160,7 +160,7 @@ def reconstruction(
     print("lamba factor: {}".format(l_factor))
     print("lambda value: {}".format(lambda_))
     G = lambda_ * L1Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=3e-3)
+    apgd = APGD_(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-4, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=save)
     
     print(f"setup time : {time.time() - start_time} s")
 
@@ -174,7 +174,7 @@ def reconstruction(
     if not no_plot:
         plt.show()
     if save:
-        plt.savefig(plib.Path(save) / f"{n_iter}.png")
+        plt.savefig(plib.Path(save) / f"{n_iter}_final.png")
         print(f"Files saved to : {save}")
 
 
