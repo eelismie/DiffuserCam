@@ -1,3 +1,18 @@
+"""
+This script will plot ground truth, diffuser and estimated image for different images and different methods together.
+
+Make sure that you downloaded "our_dataset" folder from https://drive.google.com/drive/folders/1QFdVsVgst7bFaG6L7zbAO0bO5vJu-Mbh?usp=sharing
+
+Put downloaded "our_dataset" inside "data" folder.
+
+Make sure that cropped estimated images exist in "data/our_dataset/reconstructions" folder. If it doesn't exist, do the reconstructions, otherwise this script doesn't give correct plot.
+
+Run the following command:
+```bash
+python solutions/plot_estimated_imgs.py
+```
+"""
+
 import os
 import glob
 import numpy as np

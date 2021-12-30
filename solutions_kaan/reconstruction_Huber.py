@@ -1,9 +1,21 @@
 """
-This script will load the PSF data and raw measurement and get the reconstruction by Huber norm solution.
+This script will load the PSF data and raw measurement and get the reconstruction by Huber norm method.
 
+Make sure that you downloaded "our_dataset" folder from https://drive.google.com/drive/folders/1QFdVsVgst7bFaG6L7zbAO0bO5vJu-Mbh?usp=sharing
+
+Put downloaded "our_dataset" inside "data" folder.
+
+Run the following command:
 ```bash
-python solutions/reconstruction_Huber.py --psf_fp data/our_dataset/psf/psf.png --data_fp data/our_dataset/diffuser_imgs/img1.png --save data/our_dataset/reconstructions/huber/img1.png --acc_thresh 0.0007
+python solutions/reconstruction_Huber.py --psf_fp data/our_dataset/psf/psf.png --data_fp data/our_dataset/diffuser_imgs/img1.png --save data/our_dataset/reconstructions/huber/img1.png --l_factor 0.03 --delta 1.0 --acc_thresh 0 --n_iter 1000
 ```
+
+To see the metrics and get the cropped image, run the following command (note that vertical_crop and horizontal_crop values should be changed for different images):
+```bash
+python scripts/compute_metrics_from_original.py --recon data/our_dataset/reconstructions/huber/img1.npy --original data/our_dataset/original_imgs/img1.jpeg --vertical_crop 183 411 --horizontal_crop 343 656 --rotation 0.025 --save_proc_est data/our_dataset/reconstructions/huber/img1_final.png
+```
+
+You can see the estimated image in "data/our_dataset/reconstructions/huber" folder.
 
 """
 
