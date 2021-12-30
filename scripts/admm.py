@@ -2,8 +2,7 @@
 Apply ADMM reconstruction.
 
 ```
-python scripts/admm.py --psf_fp data/psf/diffcam_rgb.png \
---data_fp data/raw_data/thumbs_up_rgb.png --n_iter 5
+python scripts/admm.py --psf_fp data/our_dataset/psf/psf.png --data_fp data/our_dataset/diffuser_imgs/img1.png --n_iter 6 --save data/our_dataset/reconstructions/admm/img1.png
 ```
 
 """
@@ -16,7 +15,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from diffcam.io import load_data
 from diffcam.admm import ADMM
-
+from PIL import Image
+import numpy as np
 
 @click.command()
 @click.option(
@@ -54,7 +54,8 @@ from diffcam.admm import ADMM
 )
 @click.option(
     "--save",
-    is_flag=True,
+    default=None,
+    type=str,
     help="Whether to save intermediate and final reconstructions.",
 )
 @click.option(
@@ -125,12 +126,6 @@ def admm(
 
     if disp < 0:
         disp = None
-    if save:
-        save = os.path.basename(data_fp).split(".")[0]
-        timestamp = datetime.now().strftime("_%d%m%d%Y_%Hh%M")
-        save = "admm_" + save + timestamp
-        save = plib.Path(__file__).parent / save
-        save.mkdir(exist_ok=False)
 
     start_time = time.time()
     recon = ADMM(psf)
@@ -138,12 +133,21 @@ def admm(
     print(f"setup time : {time.time() - start_time} s")
 
     start_time = time.time()
-    recon.apply(n_iter=n_iter, disp_iter=disp, save=save, gamma=gamma, plot=not no_plot)
+    recon.apply(n_iter=n_iter, disp_iter=disp, save=None, gamma=gamma, plot=not no_plot)
     print(f"proc time : {time.time() - start_time} s")
 
     if not no_plot:
         plt.show()
-    if save:
+    if save is not None:
+        est = recon.get_image_est()
+        est_norm = est/est.max()
+        est_nclip = np.clip(est_norm, a_min=0, a_max=est_norm.max())
+        img_data = (est_nclip * 255.0).astype(np.uint8)
+        im = Image.fromarray(img_data)
+        im.save(save)
+        bname =os.path.basename(save).split(".")[0]
+        bname = bname + ".npy"
+        np.save(plib.Path(os.path.dirname(save)) / bname, est)
         print(f"Files saved to : {save}")
 
 
