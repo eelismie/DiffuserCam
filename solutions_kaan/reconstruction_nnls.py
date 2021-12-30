@@ -161,7 +161,7 @@ def reconstruction(
     l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H
     G = NonNegativeOrthant(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
+    apgd = APGD_(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
     
     print(f"setup time : {time.time() - start_time} s")
 

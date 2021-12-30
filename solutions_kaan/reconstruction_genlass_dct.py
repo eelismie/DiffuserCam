@@ -190,7 +190,7 @@ def reconstruction(
     print("lambda value: {}".format(lambda_))
 
     G = lambda_ * L1Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
+    apgd = APGD_(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
     
     print(f"setup time : {time.time() - start_time} s")
 

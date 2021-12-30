@@ -188,7 +188,7 @@ def reconstruction_nnTV(
 
     Hcal = lambda_ * L1Norm(dim=grad.shape[0])
 
-    pds = PDS(dim=H.shape[1], F=F, G=G, H=Hcal, K=grad, verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
+    pds = PDS_(dim=H.shape[1], F=F, G=G, H=Hcal, K=grad, verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
 
     print(f"setup time : {time.time() - start_time} s")
 
