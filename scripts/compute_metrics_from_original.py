@@ -6,9 +6,11 @@ python scripts/compute_metrics_from_original.py \
 --original data/original/thumbs_up.png \
 --vertical_crop 262 371 \
 --horizontal_crop 438 527 \
---rotation -0.5
+--rotation -0.5 \
+--save_proc_est data/reconstruction/admm_thumbs_up_rgb_final.png
 ```
 you can get examples files from SWITCHDrive: https://drive.switch.ch/index.php/s/NdgHlcDeHVDH5ww
+
 """
 
 import numpy as np
@@ -19,7 +21,7 @@ from diffcam.io import load_image
 from diffcam.util import resize
 from scipy.ndimage import rotate
 from diffcam.metric import mse, psnr, ssim, lpips
-
+from PIL import Image
 
 @click.command()
 @click.option(
@@ -48,7 +50,13 @@ from diffcam.metric import mse, psnr, ssim, lpips
     help="Degrees to rotate reconstruction.",
 )
 @click.option("-v", "--verbose", count=True)
-def compute_metrics(recon, original, vertical_crop, horizontal_crop, rotation, verbose):
+@click.option(
+    "--save_proc_est",
+    default=None,
+    type=str,
+    help="Whether to save cropped and rotated reconstructions.",
+)
+def compute_metrics(recon, original, vertical_crop, horizontal_crop, rotation, verbose, save_proc_est):
 
     # load estimate
     est = np.load(recon)
@@ -62,11 +70,18 @@ def compute_metrics(recon, original, vertical_crop, horizontal_crop, rotation, v
     )
     est /= est.max()
     est = np.clip(est, 0, 1)
+    
     if verbose:
         print("estimate cropped: ")
         print(est.shape)
         print(est.dtype)
         print(est.max())
+        
+    if save_proc_est is not None:
+        img_data = (est * 255.0).astype(np.uint8)
+        im = Image.fromarray(img_data)
+        im.save(save_proc_est)
+        
     plot_image(est)
 
     # load real image
