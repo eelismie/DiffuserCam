@@ -67,7 +67,7 @@ from scipy.fft import dctn, idctn
 )
 @click.option(
     "--disp",
-    default=50,
+    default=-1,
     type=int,
     help="How many iterations to wait for intermediate plot/results. Set to negative value for no intermediate plots.",
 )
