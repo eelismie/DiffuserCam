@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 import pathlib as plib
 
 # for disp and save arguments
-# apgd with intermediate plots and saves!
+# apgd with intermediate plots and saves
+
 class APGD_(APGD):
     def __init__(self, gamma, datashape, no_plot, save, *args, **kwargs):
         self.gamma = gamma
@@ -33,6 +34,7 @@ class APGD_(APGD):
             print(f"Files saved to : {self.save}")
 
 
+#PDS with intermediate plots and saves 
 class PDS_(PDS):
     def __init__(self, gamma, datashape, no_plot, save, *args, **kwargs):
         self.gamma = gamma
@@ -56,7 +58,7 @@ class PDS_(PDS):
 class Convolve2DRGB(LinearOperator):
 
     """
-    Linear operator for 2D convolution with psf. Strong inspiration 
+    Linear operator for 2D convolution with psf, generalized for 3 channel images. Strong inspiration 
     taken from diffcam/recon.py and diffcam/admm.py files. 
     """
 
