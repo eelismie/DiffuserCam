@@ -103,6 +103,11 @@ class Convolve2DRGB(LinearOperator):
         return x[self._start_idx[0] : self._end_idx[0], self._start_idx[1] : self._end_idx[1]]
 
 class HuberNorm(DifferentiableFunctional):
+
+    """
+    Definition of Huber norm functional 
+    """
+    
     def __init__(self, dim: int, delta: float):
         self.delta = delta
         super(HuberNorm, self).__init__(dim=dim, diff_lipschitz_cst=1.)
