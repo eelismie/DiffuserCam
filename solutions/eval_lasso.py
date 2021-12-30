@@ -22,11 +22,12 @@ from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import PDS, APGD
 
 """
-
-Evaluation of algorithm from section 7 on Flickr dataset (or a subset of it) 
+Evaluation of algorithm from section 6 in project, on a subset of Flickr images. 
 
 ```
-python solutions/evaluate_Huber.py --data data --n_files 3 --save
+python solutions/evaluate_nnTV.py \
+--data data \
+--n_files 3 --save
 ```
 
 """
@@ -61,9 +62,6 @@ python solutions/evaluate_Huber.py --data data --n_files 3 --save
 )
 
 def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
-
-    """ Evaluate performance of algorithm in section 7 of project (with huber functional) on Flickr dataset """
-
     assert data is not None
 
     dataset_dir = os.path.join(data, "dataset")
@@ -99,19 +97,9 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
 
     if save:
         timestamp = datetime.now().strftime("_%d%m%d%Y_%Hh%M")
-        save = "huber_mirflickr" + timestamp
+        save = "lasso_mirflickr" + timestamp
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
-
-    is_rbg = len(psf_float.shape) == 3
-
-    if is_rbg:
-        shape_ = (psf_float.shape[0], psf_float.shape[1])
-        grad = BlockDiagonalOperator(Gradient(shape_), Gradient(shape_), Gradient(shape_))
-        grad.compute_lipschitz_cst()
-    else: 
-        grad = Gradient(psf_float.shape)
-        grad.compute_lipschitz_cst()
 
     H = Convolve2DRGB(psf_float.size, psf_float) #assumes psf and data are same shape
     H.compute_lipschitz_cst()
@@ -134,21 +122,17 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
         diffuser_prep = np.clip(diffuser_prep, a_min=0, a_max=1)
         diffuser_prep /= np.linalg.norm(diffuser_prep.ravel())
 
-        l22_loss = (1 / 2) * SquaredL2Loss(dim=H.shape[0], data=diffuser_prep.ravel())
+        l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=diffuser_prep.ravel())
         F = l22_loss * H
-        G = NonNegativeOrthant(dim=H.shape[1])
-        tmp = H.adjoint(diffuser_prep.flatten())
-
-        delta = 0.5
         l_factor = 0.001
 
+        tmp = H.adjoint(diffuser_prep.flatten())
         lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
-        h = HuberNorm(dim=grad.shape[0], delta=delta)
-        F += lambda_ * h * grad
-
-        apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=100, max_iter=n_iter, accuracy_threshold=5e-4)
+        print("lamba factor: {}".format(l_factor))
+        print("lambda value: {}".format(lambda_))
+        G = lambda_ * L1Norm(dim=H.shape[1])
+        apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=5e-4)
         estimate, converged, diagnostics = apgd.iterate()
-        print(converged)
 
         est = estimate['iterand'].reshape(diffuser_prep.shape)
         est[est < 0] = 0

@@ -161,8 +161,8 @@ def reconstruction(
     is_rbg = len(data.shape) == 3
 
     if is_rbg:
-        obj_idct2d = IDCT_2D(size=data.shape[0]*data.shape[1], n1=data.shape[0], n2=data.shape[1])
-        idct = BlockDiagonalOperator(obj_idct2d, obj_idct2d , obj_idct2d)
+        obj_idct2d = IDCT_2D(size=data.shape[0]*data.shape[1],n1=data.shape[0],n2=data.shape[1])
+        idct = BlockDiagonalOperator(obj_idct2d,obj_idct2d,obj_idct2d)
     else: 
         idct = IDCT_2D(size=data.size, n1=data.shape[0], n2=data.shape[1])
 
@@ -178,7 +178,7 @@ def reconstruction(
     print("lambda value: {}".format(lambda_))
 
     G = lambda_ * L1Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-4)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration = "CD", verbose=10, max_iter=n_iter, accuracy_threshold=5e-4)
     
     print(f"setup time : {time.time() - start_time} s")
 
@@ -193,7 +193,7 @@ def reconstruction(
     if not no_plot:
         plt.show()
     if save:
-        plt.savefig(plib.Path(save) / f"{n_iter}.png")
+        np.save(plib.Path(save) / f"{n_iter}.npy", estimate['iterand'].reshape(data.shape), allow_pickle=True, fix_imports=True)
         print(f"Files saved to : {save}")
 
 

@@ -162,6 +162,7 @@ def reconstruction(
     if not no_plot:
         plt.show()
     if save:
+        plt.savefig(plib.Path(save) / f"{n_iter}.png")
         print(f"Files saved to : {save}")
 
 

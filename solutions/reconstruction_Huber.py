@@ -184,7 +184,7 @@ def reconstruction(
     h = HuberNorm(dim=grad.shape[0], delta=delta)
     F += lambda_ * h * grad
 
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=1e-4)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=5e-4)
 
     print(f"setup time : {time.time() - start_time} s")
 
@@ -198,6 +198,7 @@ def reconstruction(
     if not no_plot:
         plt.show()
     if save:
+        np.save(plib.Path(save) / f"{n_iter}.npy", estimate['iterand'].reshape(data.shape), allow_pickle=True, fix_imports=True)
         print(f"Files saved to : {save}")
 
 class HuberNorm(DifferentiableFunctional):
@@ -208,7 +209,7 @@ class HuberNorm(DifferentiableFunctional):
     def __call__(self, x):
         center = np.abs(x) <= self.delta
         x[center] = .5 * x[center]**2
-        x[~ center] = self.delta * (np.abs(x[~ center]) - self.delta/2)
+        x[~center] = self.delta * (np.abs(x[~ center]) - self.delta/2)
         return x.sum()
 
     def jacobianT(self, x):
