@@ -35,7 +35,7 @@ from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
 from diffcam.plot import plot_image
 
-from utils import Convolve2DRGB
+from utils import Convolve2DRGB, APGD_, PDS_
 
 @click.command()
 @click.option(
@@ -174,7 +174,7 @@ def reconstruction_lasso(
     print("lamba factor: {}".format(l_factor))
     print("lambda value: {}".format(lambda_))
     G = lambda_ * L1Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=acc_thresh)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
     
     print(f"setup time : {time.time() - start_time} s")
 
@@ -183,7 +183,8 @@ def reconstruction_lasso(
     estimate, converged, diagnostics = apgd.iterate()
     est = estimate['iterand'].reshape(data.shape)
     ax = plot_image(est, gamma=gamma)
-    
+    ax.set_title("Final reconstruction - LASSO")
+
     print(f"proc time : {time.time() - start_time} s")
 
     if not no_plot:

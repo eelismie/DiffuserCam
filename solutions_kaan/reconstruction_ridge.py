@@ -36,7 +36,7 @@ from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
 from diffcam.plot import plot_image
 
-from utils import Convolve2DRGB
+from utils import Convolve2DRGB, APGD_, PDS_
 
 @click.command()
 @click.option(
@@ -173,7 +173,7 @@ def reconstruction_ridge(
     tmp = H.adjoint(data.flatten())
     lambda_ = l_factor * max(abs(tmp.max()), abs(tmp.min()))
     F = l22_loss * H + lambda_ * SquaredL2Norm(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=acc_thresh)
+    apgd = APGD_(dim=H.shape[1], F=F, acceleration="CD", verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
 
     print(f"setup time : {time.time() - start_time} s")
 
@@ -185,7 +185,7 @@ def reconstruction_ridge(
 
     est = estimate['iterand'].reshape(data.shape)
     ax = plot_image(est, gamma=gamma)
-    ax.set_title("Final reconstruction")
+    ax.set_title("Final reconstruction - Ridge")
 
     if not no_plot:
         plt.show()

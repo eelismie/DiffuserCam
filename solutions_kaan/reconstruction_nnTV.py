@@ -37,7 +37,7 @@ from pycsou.linop.diff import Gradient
 from diffcam.plot import plot_image
 from pycsou.linop.base import BlockDiagonalOperator
 
-from utils import Convolve2DRGB
+from utils import Convolve2DRGB, APGD_, PDS_
 
 @click.command()
 @click.option(
@@ -188,7 +188,7 @@ def reconstruction_nnTV(
 
     Hcal = lambda_ * L1Norm(dim=grad.shape[0])
 
-    pds = PDS(dim=H.shape[1], F=F, G=G, H=Hcal, K=grad, verbose=10, max_iter=n_iter, accuracy_threshold=acc_thresh)
+    pds = PDS(dim=H.shape[1], F=F, G=G, H=Hcal, K=grad, verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
 
     print(f"setup time : {time.time() - start_time} s")
 

@@ -38,7 +38,7 @@ from pycsou.linop.diff import Gradient
 from diffcam.plot import plot_image
 import numpy as np
 
-from utils import Convolve2DRGB
+from utils import Convolve2DRGB, APGD_, PDS_
 from pycsou.linop.base import BlockDiagonalOperator
 
 @click.command()
@@ -198,7 +198,7 @@ def reconstruction_Huber(
     h = HuberNorm(dim=grad.shape[0], delta=delta)
     F += lambda_ * h * grad
 
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=acc_thresh)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
 
     print(f"setup time : {time.time() - start_time} s")
 

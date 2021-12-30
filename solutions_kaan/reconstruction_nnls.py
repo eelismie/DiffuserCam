@@ -35,7 +35,7 @@ from pycsou.linop.conv import Convolve2D
 from pycsou.opt.proxalgs import AcceleratedProximalGradientDescent as APGD
 from diffcam.plot import plot_image
 
-from utils import Convolve2DRGB
+from utils import Convolve2DRGB, APGD_, PDS_
 
 @click.command()
 @click.option(
@@ -161,7 +161,7 @@ def reconstruction(
     l22_loss = (1/2) * SquaredL2Loss(dim=H.shape[0], data=data.ravel())
     F = l22_loss * H
     G = NonNegativeOrthant(dim=H.shape[1])
-    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=10, max_iter=n_iter, accuracy_threshold=acc_thresh)
+    apgd = APGD(dim=H.shape[1], F=F, G=G, acceleration="CD", verbose=disp, max_iter=n_iter, accuracy_threshold=acc_thresh, gamma=gamma, datashape=data.shape, no_plot=no_plot, save=None)
     
     print(f"setup time : {time.time() - start_time} s")
 
